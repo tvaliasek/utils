@@ -282,4 +282,37 @@ class Image extends Nette\Object {
         }
         return true;
     }
+    
+    /**
+     * Creates thumbnail from PDF file and saves it to location
+     * @param string $pdfPath
+     * @param string $saveFilepath
+     * @param int $width
+     * @param int $height
+     * @return boolean
+     */
+    public static function savePDFImage($pdfPath, $saveFilepath, $width, $height){
+        if(file_exists($pdfPath)){
+            $image = \Nette\Utils\Image::fromString($this->snapPDFThumbBlob($pdfPath));
+            $image->resize($width, $height, \Nette\Utils\Image::FIT);
+            Tooler::unlinkIfExists($saveFilepath);
+            $image->save($saveFilepath, self::QUALITY);
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * Snaps first page of pdf and returns it as jpeg image blob
+     * @param string $pdfPath
+     * @return mixed
+     */
+    public static function snapPDFThumbBlob($pdfPath){
+        $img = new \Imagick();
+        $img->readimage($pdfPath)[0];
+        $img->setimageformat('jpg');
+        $img->setimagecompression(\Imagick::COMPRESSION_JPEG);
+        $img->setimagecompressionquality(100);
+        return $img->getimageblob();
+    }
 }
