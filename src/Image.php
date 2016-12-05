@@ -315,4 +315,19 @@ class Image extends Nette\Object {
         $img->setimagecompressionquality(100);
         return $img->getimageblob();
     }
+    
+    /**
+     * Resizes image by longest side and overwrites original
+     * @param int $width
+     * @param int $height
+     */
+    public function resizeOverwrite($width, $height){
+        $this->resizeByLongest($width, $height);
+        if($this->image instanceof \Nette\Utils\Image){
+            $this->image->save($this->imagePath, self::QUALITY);
+        } else {
+            Tooler::unlinkIfExists($this->imagePath);
+            $this->image->writeimage($this->imagePath);
+        }
+    }
 }
