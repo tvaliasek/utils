@@ -268,7 +268,7 @@ class Image extends Nette\Object {
      * @param string $targetBaseName
      * @return boolean true on success
      */
-    public static function deleteResizes($deleteOriginal = false, $imageSizes = null, $targetFolder = null, $targetBaseName = null){
+    public function deleteResizes($deleteOriginal = false, $imageSizes = null, $targetFolder = null, $targetBaseName = null){
         $sizes = ($imageSizes!==null) ? $imageSizes : self::$defaultImageSizes;
         $folderPath = ($targetFolder!==null) ? $targetFolder : str_ireplace(basename($this->imagePath), '', $this->imagePath);
         $filename = ($targetBaseName = null) ? $targetBaseName : $this->sanitizedFilename; 
@@ -330,4 +330,6 @@ class Image extends Nette\Object {
             $this->image->writeimage($this->imagePath);
         }
     }
+    
+    
 }
