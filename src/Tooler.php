@@ -262,14 +262,33 @@ class Tooler {
     /**
      * Simply send basic email with html body
      * @param string $from
-     * @param string $to
+     * @param string || array $to
      * @param string $subject
      * @param string $body
+	 * @param string || array $bcc
      * @return boolean
      */
-    public static function sendEmail($from, $to, $subject, $body){
+    public static function sendEmail($from, $to, $subject, $body, $bcc=null){
         $message = new \Nette\Mail\Message();
-        $message->setFrom($from)->addTo($to)->setSubject($subject)->setHtmlBody($body);
+        $message->setFrom($from);
+		if(is_array($to)){
+			foreach($to as $address){
+				$message->addTo($address);
+			}
+		} else {
+			$message->addTo($to);
+		}
+		$message->setSubject($subject);
+		$message->setHtmlBody($body);
+		if($bcc!==null){
+			if(is_array($bcc)){
+				foreach($bcc as $address){
+					$message->addBcc($address);
+				}
+			} else {
+				$message->addBcc($bcc);
+			}
+		}
         $mailer = new \Nette\Mail\SendmailMailer();
         return $mailer->send($message);
     }
