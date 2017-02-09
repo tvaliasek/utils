@@ -9,3 +9,5 @@ $ composer require tvaliasek/utils
 Various utility functions
 ### Image
 Basic manipulation with image files using Imagick or Nette\Image (GD wrapper)
+### XSendfileResponse
+Response for downloading files through mod_xsendfile (forked Nette\Application\Responses\FileResponse)
