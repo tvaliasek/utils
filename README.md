@@ -11,3 +11,5 @@ Various utility functions
 Basic manipulation with image files using Imagick or Nette\Image (GD wrapper)
 ### XSendfileResponse
 Response for downloading files through mod_xsendfile (forked Nette\Application\Responses\FileResponse)
+### reCaptchaValidator
+Simple validation of google recaptcha response
