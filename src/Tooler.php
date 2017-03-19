@@ -293,5 +293,16 @@ class Tooler {
         return $mailer->send($message);
     }
     
-
+	/**
+	 * Check mime type of file
+	 * @param string $filepath
+	 * @param string $mimeType
+	 * @return boolean true on success
+	 */
+	public static function validateMimeType($filepath, $mimeType){
+		if(file_exists($filepath)){
+			return strcasecmp(mime_content_type($filepath), $mimeType) === 0;
+		}
+		return false;
+	}
 }
