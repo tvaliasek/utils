@@ -10,15 +10,19 @@ use Nette,
  */
 class Image extends Nette\Object {
 
+	const RESIZE_METHOD_CONTAIN = 'contain';
+	const RESIZE_METHOD_COVER = 'cover';
+	
 	/**
 	 * default image sizes for processing responsive variants of image
 	 * @var array
 	 */
-	public static $defaultImageSizes = array('lg' => array('w' => 1280, 'h' => 720),
-		'md' => array('w' => 1024, 'h' => 576),
-		'sm' => array('w' => 768, 'h' => 432),
-		'xs' => array('w' => 512, 'h' => 288),
-		'thumb' => array('w' => 175, 'h' => 175));
+	public static $defaultImageSizes = array(
+		'lg' => array('w' => 1280, 'h' => 720, 'method'=>'contain'),
+		'md' => array('w' => 1024, 'h' => 576, 'method'=>'contain'),
+		'sm' => array('w' => 768, 'h' => 432, 'method'=>'contain'),
+		'xs' => array('w' => 512, 'h' => 288, 'method'=>'contain'),
+		'thumb' => array('w' => 175, 'h' => 175, 'method'=>'cover'));
 
 	/**
 	 * Default memory resouse limit for imagick in MB
@@ -238,15 +242,17 @@ class Image extends Nette\Object {
 
 	private function processResizesImagick($sizes, $folderPath, $filename) {
 		$image = clone $this->image;
-		$this->image->setcompressionquality(self::DEFAULT_QUALITY);
-
+		
 		foreach ($sizes as $sizeName => $size) {
+			$this->image = clone $image;
+			$this->image->setcompressionquality(self::DEFAULT_QUALITY);
+			$method = (key_exists('method', $size) && in_array($size['method'], [self::RESIZE_METHOD_CONTAIN, self::RESIZE_METHOD_COVER])) ? $size['method'] : self::RESIZE_METHOD_CONTAIN;
 			if (!is_dir($folderPath . '/resized/' . $sizeName)) {
 				mkdir($folderPath . '/resized/' . $sizeName, 0754, true);
 			}
 			$filepath = $folderPath . '/resized/' . $sizeName . '/' . $filename . $this->extension;
 			Tooler::unlinkIfExists($filepath);
-			if ($sizeName == self::THUMBNAIL_SIZE_NAME && $this->cropThumbs) {
+			if (($sizeName == self::THUMBNAIL_SIZE_NAME && $this->cropThumbs) || $method==self::RESIZE_METHOD_COVER) {
 				$this->image->cropthumbnailimage($size['w'], $size['h']);
 			} else {
 				$this->resizeByLongest($size['w'], $size['h']);
@@ -260,12 +266,14 @@ class Image extends Nette\Object {
 	private function processResizesGD($sizes, $folderPath, $filename) {
 		$image = clone $this->image;
 		foreach ($sizes as $sizeName => $size) {
+			$this->image = clone $image;
+			$method = (key_exists('method', $size) && in_array($size['method'], [self::RESIZE_METHOD_CONTAIN, self::RESIZE_METHOD_COVER])) ? $size['method'] : self::RESIZE_METHOD_CONTAIN;
 			if (!is_dir($folderPath . '/resized/' . $sizeName)) {
 				mkdir($folderPath . '/resized/' . $sizeName, 0754, true);
 			}
 			$filepath = $folderPath . '/resized/' . $sizeName . '/' . $filename . $this->extension;
 			Tooler::unlinkIfExists($filepath);
-			if ($sizeName == self::THUMBNAIL_SIZE_NAME && $this->cropThumbs) {
+			if (($sizeName == self::THUMBNAIL_SIZE_NAME && $this->cropThumbs) || $method==self::RESIZE_METHOD_COVER) {
 				$this->image->resize($size['w'], $size['h'], \Nette\Utils\Image::FILL);
 				$this->image->resize($size['w'], $size['h'], \Nette\Utils\Image::EXACT);
 			} else {
