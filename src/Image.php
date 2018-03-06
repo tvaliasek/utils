@@ -284,6 +284,22 @@ class Image extends Nette\Object {
 		}
 		unset($image);
 	}
+	
+	public function snapThumbImagick(string $filename, int $width, int $height, string $method = self::RESIZE_METHOD_CONTAIN){
+		$this->rotateByExif();
+		$image = clone $this->image;
+		$this->image->setcompressionquality(self::DEFAULT_QUALITY);
+		$folderPath = str_ireplace(basename($this->imagePath), '', $this->imagePath);
+		$filepath = preg_replace('/\/{2,}/', '/', ($folderPath . '/' . str_ireplace($this->extension, $filename, '') . $this->extension));
+		Tooler::unlinkIfExists($filepath);
+		if ($method==self::RESIZE_METHOD_COVER) {
+			$this->image->cropthumbnailimage($width, $height);
+		} else {
+			$this->resizeByLongest($width, $height);
+		}
+		$this->image->writeimage($filepath);	
+		return new Image($filepath);
+	}
 
 	/**
 	 * Delete responsive variants of image
