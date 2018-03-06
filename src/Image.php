@@ -298,6 +298,8 @@ class Image extends Nette\Object {
 			$this->resizeByLongest($width, $height);
 		}
 		$this->image->writeimage($filepath);	
+		$this->image = clone $image;
+		unset($image);
 		return new Image($filepath);
 	}
 
