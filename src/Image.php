@@ -8,7 +8,7 @@ use Nette,
 /**
  * Basic image manipulations with imagick lib support
  */
-class Image extends Nette\Object {
+class Image {
 
 	const RESIZE_METHOD_CONTAIN = 'contain';
 	const RESIZE_METHOD_COVER = 'cover';
