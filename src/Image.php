@@ -290,7 +290,7 @@ class Image {
 		$image = clone $this->image;
 		$this->image->setcompressionquality(self::DEFAULT_QUALITY);
 		$folderPath = str_ireplace(basename($this->imagePath), '', $this->imagePath);
-		$filepath = preg_replace('/\/{2,}/', '/', ($folderPath . '/' . str_ireplace($this->extension, $filename, '') . $this->extension));
+		$filepath = preg_replace('/\/{2,}/', '/', ($folderPath . '/' . str_ireplace($this->extension, '', $filename) . $this->extension));
 		Tooler::unlinkIfExists($filepath);
 		if ($method==self::RESIZE_METHOD_COVER) {
 			$this->image->cropthumbnailimage($width, $height);
