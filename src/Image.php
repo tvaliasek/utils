@@ -101,6 +101,11 @@ class Image {
 	 * @var bool
 	 */
 	private $cropThumbs = true;
+	
+	/**
+	 * @var string 
+	 */
+	private $mimeType;
 
 	/**
 	 * Create instance of Image
@@ -114,7 +119,7 @@ class Image {
 		if (file_exists($filepath)) {
 			$filesize = filesize($filepath);
 			$this->imagePath = $filepath;
-			$mimeType = mime_content_type($this->imagePath);
+			$mimeType = $this->mimeType = mime_content_type($this->imagePath);
 			switch ($mimeType) {
 				case 'image/jpeg':
 				case 'image/jpg':
@@ -246,6 +251,9 @@ class Image {
 		foreach ($sizes as $sizeName => $size) {
 			$this->image = clone $image;
 			$this->image->setcompressionquality(self::DEFAULT_QUALITY);
+			if ($this->mimeType == 'image/jpeg') {
+				$this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
+			}
 			$method = (key_exists('method', $size) && in_array($size['method'], [self::RESIZE_METHOD_CONTAIN, self::RESIZE_METHOD_COVER])) ? $size['method'] : self::RESIZE_METHOD_CONTAIN;
 			if (!is_dir($folderPath . '/resized/' . $sizeName)) {
 				mkdir($folderPath . '/resized/' . $sizeName, 0754, true);
@@ -296,6 +304,9 @@ class Image {
 			$this->image->cropthumbnailimage($width, $height);
 		} else {
 			$this->resizeByLongest($width, $height);
+		}
+		if ($this->mimeType == 'image/jpeg') {
+			$this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
 		}
 		$this->image->writeimage($filepath);	
 		$this->image = clone $image;
@@ -370,6 +381,9 @@ class Image {
 			$this->image->save($this->imagePath, self::QUALITY);
 		} else {
 			Tooler::unlinkIfExists($this->imagePath);
+			if ($this->mimeType == 'image/jpeg') {
+				$this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
+			}
 			$this->image->writeimage($this->imagePath);
 		}
 	}
