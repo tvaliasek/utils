@@ -249,9 +249,12 @@ class Tooler {
      * @return string || boolean false
      * @throws \Exception
      */
-    public static function buildTemplate($templatePath, array $params = []){
+    public static function buildTemplate($templatePath, array $params = [], $linkGenerator = null){
         if(file_exists($templatePath)){
             $latte = self::getLatteEngine();
+			if ($linkGenerator instanceof \Nette\Application\LinkGenerator) {
+				$latte->addProvider('uiControl', $linkGenerator);
+			}
             return $latte->renderToString($templatePath, $params);
         } else {
             throw new \Exception('Invalid latte template path.');
