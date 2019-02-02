@@ -2,435 +2,451 @@
 
 namespace Tvaliasek\Utils;
 
-use Nette,
-	Nette\Utils\Strings;
+use Nette\Utils\Strings;
 
 /**
- * Basic image manipulations with imagick lib support
+ * Class Image
+ * Image manipulation using Imagick with disk cache
+ * @package Tvaliasek\Utils
  */
-class Image {
+class Image
+{
+    const RESIZE_METHOD_CONTAIN = 'contain';
+    const RESIZE_METHOD_COVER = 'cover';
 
-	const RESIZE_METHOD_CONTAIN = 'contain';
-	const RESIZE_METHOD_COVER = 'cover';
-	
-	/**
-	 * default image sizes for processing responsive variants of image
-	 * @var array
-	 */
-	public static $defaultImageSizes = array(
-		'lg' => array('w' => 1280, 'h' => 720, 'method'=>'contain'),
-		'md' => array('w' => 1024, 'h' => 576, 'method'=>'contain'),
-		'sm' => array('w' => 768, 'h' => 432, 'method'=>'contain'),
-		'xs' => array('w' => 512, 'h' => 288, 'method'=>'contain'),
-		'thumb' => array('w' => 175, 'h' => 175, 'method'=>'cover'));
+    /**
+     * default image sizes for processing responsive variants of image
+     * @var array
+     */
+    public static $defaultImageSizes = [
+        'lg' => [
+            'name' => 'lg',
+            'w' => 1280,
+            'h' => 720,
+            'method' => 'contain'
+        ],
+        'thumb' => [
+            'name' => 'thumb',
+            'w' => 175,
+            'h' => 175,
+            'method' => 'cover'
+        ]
+    ];
 
-	/**
-	 * Default memory resouse limit for imagick in MB
-	 */
-	const DEFAULT_RESOURCE_LIMIT = 112;
+    /**
+     * Default compression quality level
+     */
+    const DEFAULT_QUALITY = 75;
 
-	/**
-	 * Default filesize limit in MB for usage of nette/image instead of imagick
-	 */
-	const DEFAULT_GD_FILESIZE_LIMIT = 0;
+    /**
+     * Default thumbnail size name
+     */
+    const THUMBNAIL_SIZE_NAME = 'thumb';
 
-	/**
-	 * Default compression quality level
-	 */
-	const DEFAULT_QUALITY = 80;
+    /**
+     * Key of width in sizes array
+     */
+    const SIZES_WIDTH = 'w';
 
-	/**
-	 * Default thumbnail size name
-	 */
-	const THUMBNAIL_SIZE_NAME = 'thumb';
+    /**
+     * Key of height in sizes array
+     */
+    const SIZES_HEIGHT = 'h';
 
-	/**
-	 * Key of width in sizes array
-	 */
-	const SIZES_WIDTH = 'w';
+    const SIZES_METHOD = 'method';
+    const SIZES_NAME = 'name';
 
-	/**
-	 * Key of height in sizes array
-	 */
-	const SIZES_HEIGHT = 'h';
+    /**
+     * main image
+     * @var mixed
+     */
+    private $image;
 
-	/**
-	 * main image
-	 * @var mixed
-	 */
-	private $image;
+    /**
+     * Path to image file
+     * @var string
+     */
+    private $imagePath;
 
-	/**
-	 * Path to image file
-	 * @var string
-	 */
-	private $imagePath;
+    /**
+     * Width of image
+     * @var int
+     */
+    private $width;
 
-	/**
-	 * Width of image
-	 * @var int
-	 */
-	private $width;
+    /**
+     * Height of image
+     * @var int
+     */
+    private $height;
 
-	/**
-	 * Height of image
-	 * @var int
-	 */
-	private $height;
+    /**
+     * Detected extension of image file
+     * @var string
+     */
+    private $extension;
 
-	/**
-	 * Detected extension of image file
-	 * @var string
-	 */
-	private $extension;
+    /**
+     * Original filename of image
+     * @var string
+     */
+    private $filename;
 
-	/**
-	 * Original filename of image
-	 * @var string 
-	 */
-	private $filename;
+    /**
+     * Sanitized filename of image
+     * @var string
+     */
+    private $sanitizedFilename;
 
-	/**
-	 * Sanitized filename of image
-	 * @var string
-	 */
-	private $sanitizedFilename;
+    /**
+     * Enable thumbs crop
+     * @var bool
+     */
+    private $cropThumbs = true;
 
-	/**
-	 * Enable thumbs crop
-	 * @var bool
-	 */
-	private $cropThumbs = true;
-	
-	/**
-	 * @var string 
-	 */
-	private $mimeType;
+    /**
+     * @var string
+     */
+    private $mimeType;
 
-	/**
-	 * Create instance of Image
-	 * @param string $filepath
-	 * @param int $memoryLimit
-	 * @param int $gdFilesizeLimit
-	 * @throws \Exception
-	 * @throws \Nette\FileNotFoundException
-	 */
-	public function __construct($filepath, $memoryLimit = self::DEFAULT_RESOURCE_LIMIT, $gdFilesizeLimit = self::DEFAULT_GD_FILESIZE_LIMIT) {
-		if (file_exists($filepath)) {
-			$filesize = filesize($filepath);
-			$this->imagePath = $filepath;
-			$mimeType = $this->mimeType = mime_content_type($this->imagePath);
-			switch ($mimeType) {
-				case 'image/jpeg':
-				case 'image/jpg':
-					$this->extension = '.jpg';
-					break;
-				case 'image/png':
-					$this->extension = '.png';
-					break;
-				default:
-					throw new \Exception('Unsupported image mime type, only jpg and png allowed.');
-			}
-			$this->filename = basename($this->imagePath, $this->extension);
-			$this->sanitizedFilename = Strings::webalize($this->filename);
+    /**
+     * Image constructor.
+     * @param string $filepath
+     * @throws \ImagickException
+     * @throws \InvalidArgumentException
+     */
+    public function __construct(
+        string $filepath
+    )
+    {
+        if (file_exists($filepath)) {
+            $this->imagePath = $filepath;
+            $mimeType = $this->mimeType = mime_content_type($this->imagePath);
+            switch ($mimeType) {
+                case 'image/jpeg':
+                case 'image/jpg':
+                    $this->extension = '.jpg';
+                    break;
+                case 'image/png':
+                    $this->extension = '.png';
+                    break;
+                default:
+                    throw new \InvalidArgumentException('Unsupported image mime type, only jpg and png allowed.');
+            }
+            $this->filename = basename($this->imagePath, $this->extension);
+            $this->sanitizedFilename = Strings::webalize($this->filename);
 
-			if ($filesize > ($gdFilesizeLimit * 1024 * 1024)) {
-				$this->image = new \Imagick($filepath);
-				$this->image->setresourcelimit(\Imagick::RESOURCETYPE_MEMORY, $memoryLimit * 1024 * 1024);
-				$geometry = $this->image->getimagegeometry();
-				$this->width = $geometry['width'];
-				$this->height = $geometry['height'];
-			} else {
-				$image = ($mimeType == 'image/png') ? imagecreatefrompng($filepath) : imagecreatefromjpeg($filepath);
-				$this->image = new \Nette\Utils\Image($image);
-				$this->width = $this->image->width;
-				$this->height = $this->image->height;
-			}
-		} else {
-			throw new \Nette\FileNotFoundException;
-		}
-	}
+            $this->image = new \Imagick($filepath);
+            $this->image->setresourcelimit(\Imagick::RESOURCETYPE_MEMORY, (64 * 1024 * 1024));
+            $geometry = $this->image->getimagegeometry();
+            $this->width = $geometry['width'];
+            $this->height = $geometry['height'];
+        } else {
+            throw new \InvalidArgumentException('File not found.');
+        }
+    }
 
-	/**
-	 * Get transparent pixel
-	 * @return \ImagickPixel
-	 */
-	public static function getTransparent() {
-		return new \ImagickPixel('#00000000');
-	}
+    /**
+     * Get transparent pixel
+     * @return \ImagickPixel
+     */
+    public static function getTransparent(): \ImagickPixel
+    {
+        return new \ImagickPixel('#00000000');
+    }
 
-	/**
-	 * Rotates image by orientation in EXIF data
-	 * @return \Tvaliasek\Utils\Image
-	 */
-	public function rotateByExif() {
-		$ex = @exif_read_data($this->imagePath, 'EXIF');
-		if (!empty($ex['Orientation'])) {
-			if ($this->image instanceof \Nette\Utils\Image) {
-				switch ($ex['Orientation']) {
-					case 8:
-						$this->image->rotate(90, 0);
-						break;
-					case 3:
-						$this->image->rotate(180, 0);
-						break;
-					case 6:
-						$this->image->rotate(270, 0);
-						break;
-				}
-			} else {
-				switch ($ex['Orientation']) {
-					case 8:
-						$this->image->rotateimage(self::getTransparent(), 270);
-						break;
-					case 3:
-						$this->image->rotateimage(self::getTransparent(), 180);
-						break;
-					case 6:
-						$this->image->rotateimage(self::getTransparent(), 90);
-						break;
-				}
-			}
-		}
-		return $this;
-	}
+    /**
+     * Rotates image by orientation in EXIF data
+     * @return Image
+     */
+    public function rotateByExif(): self
+    {
+        $ex = @exif_read_data($this->imagePath, 'EXIF');
+        if (!empty($ex['Orientation'])) {
+            switch ($ex['Orientation']) {
+                case 8:
+                    $this->image->rotateimage(self::getTransparent(), 270);
+                    break;
+                case 3:
+                    $this->image->rotateimage(self::getTransparent(), 180);
+                    break;
+                case 6:
+                    $this->image->rotateimage(self::getTransparent(), 90);
+                    break;
+            }
+        }
+        return $this;
+    }
 
-	/**
-	 * Rotates image by number of degrees
-	 * @param int $degrees
-	 * @return mixed
-	 */
-	public function rotate($degrees) {
-		return ($this->image instanceof \Nette\Utils\Image) ? $this->image->rotate(-1 * $degrees, 0) : $this->image->rotateimage(self::getTransparent(), $degrees);
-	}
+    /**
+     * Rotates image by number of degrees
+     * @param int $degrees
+     * @return bool
+     */
+    public function rotate(int $degrees): bool
+    {
+        return $this->image->rotateimage(self::getTransparent(), $degrees);
+    }
 
-	/**
-	 * Resize images by longest side
-	 * @param int $width
-	 * @param int $height
-	 * @return $this
-	 */
-	private function resizeByLongest($width, $height) {
-		if ($this->image instanceof \Nette\Utils\Image) {
-			if ($this->width < $this->height) {
-				$this->image->resize($height, $width);
-			} else {
-				$this->image->resize($width, $height);
-			}
-		} else {
-			if ($this->width < $this->height) {
-				$this->image->resizeimage($height, $width, \Imagick::FILTER_UNDEFINED, 0.7, true);
-			} else {
-				$this->image->resizeimage($width, $height, \Imagick::FILTER_UNDEFINED, 0.7, true);
-			}
-		}
-		return $this;
-	}
+    /**
+     * Resize images by longest side
+     * @param int $width
+     * @param int $height
+     * @return Image
+     */
+    private function resizeByLongest(int $width, int $height): self
+    {
+        if ($this->width < $this->height) {
+            $this->image->resizeimage($height, $width, \Imagick::FILTER_UNDEFINED, 0.7, true);
+        } else {
+            $this->image->resizeimage($width, $height, \Imagick::FILTER_UNDEFINED, 0.7, true);
+        }
+        return $this;
+    }
 
-	/**
-	 * Create and save responsive variants of image
-	 * @param array $imageSizes
-	 * @param string $targetFolder
-	 * @param string $targetBaseName
-	 */
-	public function processResizes($imageSizes = null, $targetFolder = null, $targetBaseName = null) {
-		$sizes = ($imageSizes !== null) ? $imageSizes : self::$defaultImageSizes;
-		$folderPath = ($targetFolder !== null) ? $targetFolder : str_ireplace(basename($this->imagePath), '', $this->imagePath);
-		$filename = ($targetBaseName = null) ? $targetBaseName : $this->sanitizedFilename;
-		$this->rotateByExif();
-		if ($this->image instanceof \Nette\Utils\Image) {
-			$this->processResizesGD($sizes, $folderPath, $filename);
-		} else {
-			$this->processResizesImagick($sizes, $folderPath, $filename);
-		}
-	}
+    /**
+     * Create and save responsive variants of image
+     * @param ImageSizesCollection $imageSizes
+     * @param string $targetFolder
+     * @param string $targetBaseName
+     * @throws \ImagickException
+     */
+    public function processResizes(
+        ImageSizesCollection $imageSizes = null,
+        string $targetFolder = null,
+        string $targetBaseName = null
+    ): void
+    {
+        $sizes = ($imageSizes !== null)
+            ? $imageSizes
+            : ImageSizesCollection::fromArray(self::$defaultImageSizes);
+        $folderPath = ($targetFolder !== null)
+            ? $targetFolder
+            : str_ireplace(basename($this->imagePath), '', $this->imagePath);
+        $filename = ($targetBaseName === null)
+            ? $targetBaseName
+            : $this->sanitizedFilename;
+        $this->rotateByExif();
+        $this->processResizesImagick($sizes, $folderPath, $filename);
+    }
 
-	private function processResizesImagick($sizes, $folderPath, $filename) {
-		$image = clone $this->image;
-		
-		foreach ($sizes as $sizeName => $size) {
-			$this->image = clone $image;
-			$this->image->setcompressionquality(self::DEFAULT_QUALITY);
-			if ($this->mimeType == 'image/jpeg') {
-				$this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
-			}
-			$method = (key_exists('method', $size) && in_array($size['method'], [self::RESIZE_METHOD_CONTAIN, self::RESIZE_METHOD_COVER])) ? $size['method'] : self::RESIZE_METHOD_CONTAIN;
-			if (!is_dir($folderPath . '/resized/' . $sizeName)) {
-				mkdir($folderPath . '/resized/' . $sizeName, 0754, true);
-			}
-			$filepath = $folderPath . '/resized/' . $sizeName . '/' . $filename . $this->extension;
-			Tooler::unlinkIfExists($filepath);
-			if (($sizeName == self::THUMBNAIL_SIZE_NAME && $this->cropThumbs) || $method==self::RESIZE_METHOD_COVER) {
-				$this->image->cropthumbnailimage($size['w'], $size['h']);
-			} else {
-				$this->resizeByLongest($size['w'], $size['h']);
-			}
-			$this->image->writeimage($filepath);
-			$this->image = clone $image;
-		}
-		unset($image);
-	}
+    /**
+     * @param ImageSizesCollection $sizes
+     * @param string $folderPath
+     * @param string $filename
+     * @throws \ImagickException
+     */
+    private function processResizesImagick(
+        ImageSizesCollection $sizes,
+        string $folderPath,
+        string $filename
+    ): void
+    {
+        $backup = clone $this->image;
 
-	private function processResizesGD($sizes, $folderPath, $filename) {
-		$image = clone $this->image;
-		foreach ($sizes as $sizeName => $size) {
-			$this->image = clone $image;
-			$method = (key_exists('method', $size) && in_array($size['method'], [self::RESIZE_METHOD_CONTAIN, self::RESIZE_METHOD_COVER])) ? $size['method'] : self::RESIZE_METHOD_CONTAIN;
-			if (!is_dir($folderPath . '/resized/' . $sizeName)) {
-				mkdir($folderPath . '/resized/' . $sizeName, 0754, true);
-			}
-			$filepath = $folderPath . '/resized/' . $sizeName . '/' . $filename . $this->extension;
-			Tooler::unlinkIfExists($filepath);
-			if (($sizeName == self::THUMBNAIL_SIZE_NAME && $this->cropThumbs) || $method==self::RESIZE_METHOD_COVER) {
-				$this->image->resize($size['w'], $size['h'], \Nette\Utils\Image::FILL);
-				$this->image->resize($size['w'], $size['h'], \Nette\Utils\Image::EXACT);
-			} else {
-				$this->resizeByLongest($size['w'], $size['h']);
-			}
-			$this->image->save($filepath, self::DEFAULT_QUALITY);
-			$this->image = clone $image;
-		}
-		unset($image);
-	}
-	
-	public function snapThumbImagick(string $filename, int $width, int $height, string $method = self::RESIZE_METHOD_CONTAIN){
-		$this->rotateByExif();
-		$image = clone $this->image;
-		$this->image->setcompressionquality(self::DEFAULT_QUALITY);
-		$folderPath = str_ireplace(basename($this->imagePath), '', $this->imagePath);
-		$filepath = preg_replace('/\/{2,}/', '/', ($folderPath . '/' . str_ireplace($this->extension, '', $filename) . $this->extension));
-		Tooler::unlinkIfExists($filepath);
-		if ($method==self::RESIZE_METHOD_COVER) {
-			$this->image->cropthumbnailimage($width, $height);
-		} else {
-			$this->resizeByLongest($width, $height);
-		}
-		if ($this->mimeType == 'image/jpeg') {
-			$this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
-		}
-		$this->image->writeimage($filepath);	
-		$this->image = clone $image;
-		unset($image);
-		return new Image($filepath);
-	}
+        foreach ($sizes as $size) {
+            $this->image = clone $backup;
+            $this->image->setcompressionquality(self::DEFAULT_QUALITY);
+            if ($this->mimeType == 'image/jpeg') {
+                $this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
+            }
+            if (!is_dir($folderPath . '/resized/' . $size->name)) {
+                Tooler::createFolder($folderPath . '/resized/' . $size->name);
+            }
+            $filepath = $folderPath . '/resized/' . $size->name . '/' . $filename . $this->extension;
+            Tooler::unlinkIfExists($filepath);
+            if (
+                ($size->name == self::THUMBNAIL_SIZE_NAME && $this->cropThumbs) ||
+                $size->resizeMethod == self::RESIZE_METHOD_COVER
+            ) {
+                $this->image->cropthumbnailimage($size->width, $size->height);
+            } else {
+                $this->resizeByLongest($size->width, $size->height);
+            }
+            $this->image->writeimage($filepath);
+            $this->image = clone $backup;
+        }
+        unset($backup);
+    }
 
-	/**
-	 * Delete responsive variants of image
-	 * @param boolean $deleteOriginal
-	 * @param array $imageSizes
-	 * @param string $targetFolder
-	 * @param string $targetBaseName
-	 * @return boolean true on success
-	 */
-	public function deleteResizes($deleteOriginal = false, $imageSizes = null, $targetFolder = null, $targetBaseName = null) {
-		$sizes = ($imageSizes !== null) ? $imageSizes : self::$defaultImageSizes;
-		$folderPath = ($targetFolder !== null) ? $targetFolder : str_ireplace(basename($this->imagePath), '', $this->imagePath);
-		$filename = ($targetBaseName = null) ? $targetBaseName : $this->sanitizedFilename;
-		foreach ($sizes as $sizeName => $size) {
-			$filepath = $folderPath . '/resized/' . $sizeName . '/' . $filename . $this->extension;
-			Tooler::unlinkIfExists($filepath);
-		}
-		if ($deleteOriginal == true) {
-			$this->image->destroy();
-			Tooler::unlinkIfExists($this->imagePath);
-		}
-		return true;
-	}
+    /**
+     * @param string $filename
+     * @param int $width
+     * @param int $height
+     * @param string $method
+     * @return Image
+     * @throws \ImagickException
+     */
+    public function snapThumbImagick(
+        string $filename,
+        int $width,
+        int $height,
+        string $method = self::RESIZE_METHOD_CONTAIN
+    ): Image
+    {
+        $this->rotateByExif();
+        $backup = clone $this->image;
+        $this->image->setcompressionquality(self::DEFAULT_QUALITY);
+        $folderPath = str_ireplace(basename($this->imagePath), '', $this->imagePath);
+        $filepath = preg_replace(
+            '/\/{2,}/',
+            '/',
+            ($folderPath . '/' . str_ireplace($this->extension, '', $filename) . $this->extension)
+        );
+        Tooler::unlinkIfExists($filepath);
+        if ($method == self::RESIZE_METHOD_COVER) {
+            $this->image->cropthumbnailimage($width, $height);
+        } else {
+            $this->resizeByLongest($width, $height);
+        }
+        if ($this->mimeType == 'image/jpeg') {
+            $this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
+        }
+        $this->image->writeimage($filepath);
+        $this->image = clone $backup;
+        unset($backup);
+        return new Image($filepath);
+    }
 
-	/**
-	 * Creates thumbnail from PDF file and saves it to location
-	 * @param string $pdfPath
-	 * @param string $saveFilepath
-	 * @param int $width
-	 * @param int $height
-	 * @return boolean
-	 */
-	public static function savePDFImage($pdfPath, $saveFilepath, $width, $height) {
-		if (file_exists($pdfPath)) {
-			$image = \Nette\Utils\Image::fromString($this->snapPDFThumbBlob($pdfPath));
-			$image->resize($width, $height, \Nette\Utils\Image::FIT);
-			Tooler::unlinkIfExists($saveFilepath);
-			$image->save($saveFilepath, self::QUALITY);
-			return true;
-		}
-		return false;
-	}
+    /**
+     * @param bool $deleteOriginal
+     * @param ImageSizesCollection|null $imageSizes
+     * @param string|null $targetFolder
+     * @param string|null $targetBaseName
+     */
+    public function deleteResizes(
+        bool $deleteOriginal = false,
+        ImageSizesCollection $imageSizes = null,
+        string $targetFolder = null,
+        string $targetBaseName = null
+    ): void
+    {
+        $sizes = ($imageSizes !== null)
+            ? $imageSizes
+            : ImageSizesCollection::fromArray(self::$defaultImageSizes);
+        $folderPath = ($targetFolder !== null)
+            ? $targetFolder
+            : str_ireplace(basename($this->imagePath), '', $this->imagePath);
+        $filename = ($targetBaseName === null)
+            ? $targetBaseName
+            : $this->sanitizedFilename;
+        foreach ($sizes as $size) {
+            $filepath = $folderPath . '/resized/' . $size->name . '/' . $filename . $this->extension;
+            Tooler::unlinkIfExists($filepath);
+        }
+        if ($deleteOriginal) {
+            $this->image->destroy();
+            Tooler::unlinkIfExists($this->imagePath);
+        }
+    }
 
-	/**
-	 * Snaps first page of pdf and returns it as jpeg image blob
-	 * @param string $pdfPath
-	 * @return mixed
-	 */
-	public static function snapPDFThumbBlob($pdfPath) {
-		$img = new \Imagick();
-		$img->readimage($pdfPath)[0];
-		$img->setimageformat('jpg');
-		$img->setimagecompression(\Imagick::COMPRESSION_JPEG);
-		$img->setimagecompressionquality(100);
-		return $img->getimageblob();
-	}
+    /**
+     * Snaps first page of pdf and returns it as jpeg image blob
+     * @param string $pdfPath
+     * @return string
+     * @throws \ImagickException
+     */
+    public static function snapPDFThumbBlob(string $pdfPath): string
+    {
+        $img = new \Imagick();
+        $img->readImage($pdfPath)[0];
+        $img->setImageFormat('jpg');
+        $img->setImageCompression(\Imagick::COMPRESSION_JPEG);
+        $img->setImageCompressionQuality(100);
+        return $img->getImageBlob();
+    }
 
-	/**
-	 * Resizes image by longest side and overwrites original
-	 * @param int $width
-	 * @param int $height
-	 */
-	public function resizeOverwrite($width, $height) {
-		$this->resizeByLongest($width, $height);
-		if ($this->image instanceof \Nette\Utils\Image) {
-			$this->image->save($this->imagePath, self::QUALITY);
-		} else {
-			Tooler::unlinkIfExists($this->imagePath);
-			if ($this->mimeType == 'image/jpeg') {
-				$this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
-			}
-			$this->image->writeimage($this->imagePath);
-		}
-	}
+    /**
+     * Resizes image by longest side and overwrites original
+     * @param int $width
+     * @param int $height
+     */
+    public function resizeOverwrite(
+        int $width,
+        int $height
+    ): void
+    {
+        $this->resizeByLongest($width, $height);
+        Tooler::unlinkIfExists($this->imagePath);
+        if ($this->mimeType == 'image/jpeg') {
+            $this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
+        }
+        $this->image->writeimage($this->imagePath);
+    }
 
-	/**
-	 * Enable | Disable thumbs cropping
-	 * @param bool $state
-	 * @return $this
-	 */
-	public function setThumbsCrop($state) {
-		$this->cropThumbs = boolval($state);
-		return $this;
-	}
+    /**
+     * Enable | Disable thumbs cropping
+     * @param bool $state
+     * @return Image
+     */
+    public function setThumbsCrop(bool $state): self
+    {
+        $this->cropThumbs = $state === true;
+        return $this;
+    }
 
-	/**
-	 * Apply watermark with opacity to center of image
-	 * @param string $watermarkPNGFile
-	 * @param float $opacity (only for GD)
-	 * @return $this
-	 */
-	public function applyWatermark($watermarkPNGFile, $opacity = 0.3) {
-		if (!file_exists($watermarkPNGFile)) {
-			throw new \Exception('Watermark file not found.');
-		}
-		if (!Tooler::validateMimeType($watermarkPNGFile, 'image/png')) {
-			throw new \Exception('Invalid watermark image format. image/png required, ' . mime_content_type($watermarkPNGFile) . ' found.');
-		}
-		if ($this->image instanceof \Nette\Utils\Image) {
-			$wm = new Image(imagecreatefrompng($watermarkPNGFile));
-			$wm->resize(ceil(($this->width() / 2)), ceil(($this->height() / 2)), Image::FIT);
-			$x = ceil(($this->width / 2) - ($wm->getWidth() / 2));
-			$y = ceil(($this->height / 2) - ($wm->getHeight() / 2));
-			$this->image->place($wm, $x, $y, (($opacity * 100) . '%'));
-		} else {
-			$wm = new \Imagick($watermarkPNGFile);
-			$wm->setresourcelimit(\Imagick::RESOURCETYPE_MEMORY, self::DEFAULT_RESOURCE_LIMIT * 1024 * 1024);
-			$wm->resizeimage(ceil(($this->width / 2)), ceil(($this->height / 2)), \Imagick::FILTER_UNDEFINED, 0.7, true);
-			$geometry = $wm->getimagegeometry();
-			$wmWidth = $geometry['width'];
-			$wmHeight = $geometry['height'];
-			$x = ceil(($this->width / 2) - ($wmWidth / 2));
-			$y = ceil(($this->height / 2) - ($wmHeight / 2));
-			$this->image->compositeimage($wm, \Imagick::COMPOSITE_OVER, $x, $y);
-			$this->image->mergeimagelayers(\Imagick::LAYERMETHOD_FLATTEN);
-		}
+    /**
+     * Apply watermark with opacity to center of image
+     * @param string $watermarkPNGFile
+     * @param float $opacity
+     * @return Image
+     * @throws \ImagickException
+     * @throws \InvalidArgumentException
+     */
+    public function applyWatermark(
+        string $watermarkPNGFile,
+        float $opacity = 0.3
+    ): Image
+    {
+        if (!file_exists($watermarkPNGFile)) {
+            throw new \InvalidArgumentException('Watermark file not found.');
+        }
+        if (!Tooler::validateMimeType($watermarkPNGFile, 'image/png')) {
+            throw new \InvalidArgumentException(
+                'Invalid watermark image format. image/png required, ' .
+                mime_content_type($watermarkPNGFile) . ' found.'
+            );
+        }
+        $wm = new \Imagick($watermarkPNGFile);
+        $wm->setresourcelimit(\Imagick::RESOURCETYPE_MEMORY, 64 * 1024 * 1024);
+        $wm->resizeimage(ceil(($this->width / 2)), ceil(($this->height / 2)), \Imagick::FILTER_UNDEFINED, 0.7, true);
+        $geometry = $wm->getimagegeometry();
+        $wmWidth = $geometry['width'];
+        $wmHeight = $geometry['height'];
+        $x = ceil(($this->width / 2) - ($wmWidth / 2));
+        $y = ceil(($this->height / 2) - ($wmHeight / 2));
+        $wm->setImageOpacity($opacity);
+        $this->image->compositeimage($wm, \Imagick::COMPOSITE_OVER, $x, $y);
+        $this->image->mergeimagelayers(\Imagick::LAYERMETHOD_FLATTEN);
+        return $this;
+    }
 
-		return $this;
-	}
+    /**
+     * @param \Imagick $image
+     * @return \Imagick
+     * @throws \ImagickException
+     */
+    public function convertImagickToJpg(\Imagick $image)
+    {
+        $white = new \Imagick();
+        $geometry = $image->getImageGeometry();
+        $white->newImage($geometry['width'], $geometry['height'], 'white');
+        $white->compositeImage($image, \Imagick::COMPOSITE_OVER, 0, 0);
+        $white->setImageFormat('jpg');
+        return $white;
+    }
 
+    /**
+     * @param int $quality
+     * @return bool|string
+     * @throws \ImagickException
+     */
+    public function convertToJpg(int $quality)
+    {
+        $image = $this->convertImagickToJpg($this->image);
+        $image->setCompressionQuality($quality);
+        $tmp = tempnam(sys_get_temp_dir(), 'image-');
+        $image->writeImage($tmp);
+        return $tmp;
+    }
 }

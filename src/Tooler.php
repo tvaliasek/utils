@@ -1,19 +1,31 @@
 <?php
+
 namespace Tvaliasek\Utils;
+
+use Latte\Engine;
+use Latte\Macros\CoreMacros;
+use Nette\Application\LinkGenerator;
+use Nette\Bridges\ApplicationLatte\UIMacros;
+use Nette\Mail\Message;
+use Nette\Mail\SendException;
+use Nette\Mail\SendmailMailer;
+use Nette\Mail\SmtpMailer;
+use Nette\Utils\Validators;
 
 /**
  * Various utility functions
  *
  * @author tvaliasek
  */
-class Tooler {
-    
-     /**
+class Tooler
+{
+
+    /**
      * Recursive delete folder and its content
      * @param string $path
-     * @return boolean
      */
-    public static function recurDelete($path) {
+    public static function recurDelete(string $path): void
+    {
         if (is_dir($path)) {
             $contents = array_diff(scandir($path), array('.', '..'));
             if (!empty($contents)) {
@@ -25,9 +37,9 @@ class Tooler {
                     }
                 }
             }
-            return rmdir($path);
+            rmdir($path);
         } else {
-            return self::unlinkIfExists($path);
+            self::unlinkIfExists($path);
         }
     }
 
@@ -35,9 +47,9 @@ class Tooler {
      * Recursive move of folder and its content to new location
      * @param string $path
      * @param string $destination
-     * @return boolean
      */
-    public static function recurMove($path, $destination) {
+    public static function recurMove(string $path, string $destination) : void
+    {
         if (is_dir($path)) {
             if (file_exists($destination)) {
                 self::recurDelete($destination);
@@ -57,14 +69,15 @@ class Tooler {
                 }
             }
         }
-        return $this->recurDelete($path);
+        self::recurDelete($path);
     }
-    
+
     /**
      * Delete file or folder (recursive) on specified path if it exists
      * @param string $path
      */
-    public static function unlinkIfExists($path) {
+    public static function unlinkIfExists(string $path)
+    {
         if (file_exists($path)) {
             if (is_dir($path)) {
                 self::recurDelete($path);
@@ -73,93 +86,63 @@ class Tooler {
             }
         }
     }
-    
+
     /***
-    * Get the directory size
-    * @param directory $directory
-    * @return integer
-    */
-    public static function getDirSize($directory) {
+     * Get the directory size
+     * @param string $directory
+     * @return int
+     */
+    public static function getDirSize(string $directory)
+    {
         $size = 0;
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory)) as $file) {
+        foreach (new \RecursiveDirectoryIterator(new \RecursiveDirectoryIterator($directory)) as $file) {
             $size += $file->getSize();
         }
         return $size;
     }
-    
-    /**
-     * Transforms database selection to Array of Arrays (rowId => array rowData)
-     * @param \Nette\Database\Table\Selection $selection
-     * @return type
-     */
-    public static function selectionToArrays($selection) {
-        $result = array();
-        if ($selection instanceof \Nette\Database\Table\Selection) {
-            foreach ($selection as $row) {
-                if (!isset($primaryKeyName)) {
-                    $primaryKeyName = $row->getPrimary();
-                }
-                $result[$row[$primaryKeyName]] = $row->toArray();
-            }
-        }
-        return $result;
-    }
-    
+
     /**
      * Recursively creates folder
      * @param string $path
      * @param int $mode
      */
-    public static function createFolder($path, $mode = 0754) {
+    public static function createFolder(string $path, int $mode = 0754) : void
+    {
         if (!is_dir($path)) {
             mkdir($path, $mode, true);
         }
     }
-    
-    /**
-     * Converts object to array (object to json, json to array)
-     * @param mixed $object
-     * @return array || boolean false
-     */
-    public static function objectToArray($object) {
-        return json_decode(json_encode($object), true);
-    }
 
     /**
-     * 
-     * Generate v4 UUID
-     * Version 4 UUIDs are pseudo-random.
+     * @return string
      */
-    public static function UUIDv4() {
+    public static function UUIDv4() : string
+    {
         return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-                // 32 bits for "time_low"
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-                // 16 bits for "time_mid"
-                mt_rand(0, 0xffff),
-                // 16 bits for "time_hi_and_version",
-                // four most significant bits holds version number 4
-                mt_rand(0, 0x0fff) | 0x4000,
-                // 16 bits, 8 bits for "clk_seq_hi_res",
-                // 8 bits for "clk_seq_low",
-                // two most significant bits holds zero and one for variant DCE1.1
-                mt_rand(0, 0x3fff) | 0x8000,
-                // 48 bits for "node"
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+            // 32 bits for "time_low"
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            // 16 bits for "time_mid"
+            mt_rand(0, 0xffff),
+            // 16 bits for "time_hi_and_version",
+            // four most significant bits holds version number 4
+            mt_rand(0, 0x0fff) | 0x4000,
+            // 16 bits, 8 bits for "clk_seq_hi_res",
+            // 8 bits for "clk_seq_low",
+            // two most significant bits holds zero and one for variant DCE1.1
+            mt_rand(0, 0x3fff) | 0x8000,
+            // 48 bits for "node"
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
-}
-
-    public static function is_valid($uuid) {
-        return preg_match('/^\{?[0-9a-f]{8}\-?[0-9a-f]{4}\-?[0-9a-f]{4}\-?' .
-                        '[0-9a-f]{4}\-?[0-9a-f]{12}\}?$/i', $uuid) === 1;
     }
 
-/**
+    /**
      * Verifies validity of RC number
      * credits to phpfashion.cz
-     * @param mixed $rc
-     * @return boolean
+     * @param string $rc
+     * @return bool
      */
-    public static function verifyRC($rc) {
+    public static function verifyRC(string $rc) : bool
+    {
         // be liberal in what you receive
         if (!preg_match('#^\s*(\d\d)(\d\d)(\d\d)[ /]*(\d\d\d)(\d?)\s*$#', $rc, $matches)) {
             return FALSE;
@@ -174,7 +157,7 @@ class Tooler {
             $mod = ($year . $month . $day . $ext) % 11;
             if ($mod === 10)
                 $mod = 0;
-            if ($mod !== (int) $c) {
+            if ($mod !== (int)$c) {
                 return FALSE;
             }
 
@@ -201,10 +184,11 @@ class Tooler {
     /**
      * Verifies validity of IC number
      * credits to phpfashion.cz
-     * @param mixed $ic
-     * @return boolean
+     * @param string $ic
+     * @return bool
      */
-    public static function verifyIC($ic) {
+    public static function verifyIC(string $ic) : bool
+    {
         // be liberal in what you receive
         $ic = preg_replace('#\s+#', '', $ic);
 
@@ -228,119 +212,166 @@ class Tooler {
             $c = 11 - $a;
         }
 
-        return (int) $ic[7] === $c;
+        return (int)$ic[7] === $c;
     }
 
     /**
      * Get latte engine with installed macros
-     * @return \Latte\Engine
+     * @return Engine
      */
-    public static function getLatteEngine(){
-        $latte = new \Latte\Engine();
-        \Latte\Macros\CoreMacros::install($latte->getCompiler());
-        \Nette\Bridges\ApplicationLatte\UIMacros::install($latte->getCompiler());
+    public static function getLatteEngine() : Engine
+    {
+        $latte = new Engine();
+        CoreMacros::install($latte->getCompiler());
+        UIMacros::install($latte->getCompiler());
         return $latte;
     }
-    
+
     /**
      * Render latte template to string
      * @param string $templatePath
      * @param array $params
-     * @return string || boolean false
-     * @throws \Exception
+     * @param LinkGenerator|null $linkGenerator
+     * @return string
+     * @throws \InvalidArgumentException
      */
-    public static function buildTemplate($templatePath, array $params = [], $linkGenerator = null){
-        if(file_exists($templatePath)){
+    public static function buildTemplate(
+        string $templatePath,
+        array $params = [],
+        LinkGenerator $linkGenerator = null)
+    {
+        if (file_exists($templatePath)) {
             $latte = self::getLatteEngine();
-			if ($linkGenerator instanceof \Nette\Application\LinkGenerator) {
-				$latte->addProvider('uiControl', $linkGenerator);
-			}
+            if ($linkGenerator instanceof LinkGenerator) {
+                $latte->addProvider('uiControl', $linkGenerator);
+            }
             return $latte->renderToString($templatePath, $params);
         } else {
-            throw new \Exception('Invalid latte template path.');
+            throw new \InvalidArgumentException('Invalid latte template path.');
         }
-        return false;
     }
-    
+
+    public static function prepareEmail(
+        string $from,
+        string $subject,
+        string $body,
+        array $attachments = []
+    ) : Message
+    {
+        if (!Validators::isEmail($from)) {
+            throw new \InvalidArgumentException('Invalid email address: '.$from);
+        }
+        foreach ($attachments as $filepath) {
+            if (!file_exists($filepath)) {
+                throw new \InvalidArgumentException('Cannot find attachment at '.$filepath);
+            }
+        }
+        $message = new Message();
+        $message->setFrom($from);
+        $message->setSubject($subject);
+        $message->setHtmlBody($body);
+        foreach ($attachments as $filepath) {
+            $message->addAttachment($filepath);
+        }
+        return $message;
+    }
+
     /**
      * Simply send basic email with html body
      * @param string $from
-     * @param string || array $to
+     * @param string $to
      * @param string $subject
      * @param string $body
-	 * @param string || array $bcc
+     * @param string $bcc
+     * @param array $attachments
      * @return boolean
      */
-    public static function sendEmail($from, $to, $subject, $body, $bcc=null){
-        $message = new \Nette\Mail\Message();
-        $message->setFrom($from);
-		if(is_array($to)){
-			foreach($to as $address){
-				$message->addTo($address);
-			}
-		} else {
-			$message->addTo($to);
-		}
-		$message->setSubject($subject);
-		$message->setHtmlBody($body);
-		if($bcc!==null){
-			if(is_array($bcc)){
-				foreach($bcc as $address){
-					$message->addBcc($address);
-				}
-			} else {
-				$message->addBcc($bcc);
-			}
-		}
-        $mailer = new \Nette\Mail\SendmailMailer();
-        return $mailer->send($message);
+    public static function sendEmail(
+        string $from,
+        string $to,
+        string $subject,
+        string $body,
+        string $bcc = null,
+        array $attachments = []
+    )
+    {
+        if (!Validators::isEmail($from)) {
+            throw new \InvalidArgumentException('Invalid email address: '.$from);
+        }
+        if (!Validators::isEmail($to)) {
+            throw new \InvalidArgumentException('Invalid email address: '.$to);
+        }
+        if ($bcc !== null && !Validators::isEmail($bcc)) {
+            throw new \InvalidArgumentException('Invalid email address: '.$bcc);
+        }
+        $message = self::prepareEmail($from, $subject, $body, $attachments);
+        $message->addTo($to);
+        if ($bcc !== null) {
+            $message->addBcc($bcc);
+        }
+        $mailer = new SendmailMailer();
+        try {
+            $mailer->send($message);
+        } catch (SendException $e) {
+            return false;
+        }
+        return true;
     }
-	
-	/**
-     * Simply send basic email with html body
-	 * @param array $smtpSettings
+
+    /**
+     * @param array $smtpSettings
      * @param string $from
-     * @param string || array $to
+     * @param string $to
      * @param string $subject
      * @param string $body
-	 * @param string || array $bcc
-     * @return boolean
+     * @param string|null $bcc
+     * @param array $attachments
+     * @return bool
      */
-    public static function sendSMTPEmail($smtpSettings,$from, $to, $subject, $body, $bcc=null){
-        $message = new \Nette\Mail\Message();
-        $message->setFrom($from);
-		if(is_array($to)){
-			foreach($to as $address){
-				$message->addTo($address);
-			}
-		} else {
-			$message->addTo($to);
-		}
-		$message->setSubject($subject);
-		$message->setHtmlBody($body);
-		if($bcc!==null){
-			if(is_array($bcc)){
-				foreach($bcc as $address){
-					$message->addBcc($address);
-				}
-			} else {
-				$message->addBcc($bcc);
-			}
-		}
-        $mailer = new \Nette\Mail\SmtpMailer($smtpSettings);
-        return $mailer->send($message);
+    public static function sendSMTPEmail(
+        array $smtpSettings,
+        string $from,
+        string $to,
+        string $subject,
+        string $body,
+        string $bcc = null,
+        array $attachments = []
+    ) : bool
+    {
+        if (!Validators::isEmail($from)) {
+            throw new \InvalidArgumentException('Invalid email address: '.$from);
+        }
+        if (!Validators::isEmail($to)) {
+            throw new \InvalidArgumentException('Invalid email address: '.$to);
+        }
+        if ($bcc !== null && !Validators::isEmail($bcc)) {
+            throw new \InvalidArgumentException('Invalid email address: '.$bcc);
+        }
+        $message = self::prepareEmail($from, $subject, $body, $attachments);
+        $message->addTo($to);
+        if ($bcc !== null) {
+            $message->addBcc($bcc);
+        }
+        $mailer = new SmtpMailer($smtpSettings);
+        try {
+            $mailer->send($message);
+        } catch (SendException $e) {
+            return false;
+        }
+        return true;
     }
-    
-	/**
-	 * Check mime type of file
-	 * @param string $filepath
-	 * @param string $mimeType
-	 * @return boolean true on success
-	 */
-	public static function validateMimeType($filepath, $mimeType){
-		if(file_exists($filepath)){
-			return strcasecmp(mime_content_type($filepath), $mimeType) === 0;
-		}
-		return false;
-	}
+
+    /**
+     * Check mime type of file
+     * @param string $filepath
+     * @param string $mimeType
+     * @return boolean true on success
+     */
+    public static function validateMimeType(string $filepath, string $mimeType) : bool
+    {
+        if (file_exists($filepath)) {
+            return strcasecmp(mime_content_type($filepath), $mimeType) === 0;
+        }
+        return false;
+    }
 }
