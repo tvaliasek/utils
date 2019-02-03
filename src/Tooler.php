@@ -73,6 +73,24 @@ class Tooler
     }
 
     /**
+     * @param string $folder
+     * @return bool
+     * @throws \InvalidArgumentException
+     */
+    public static function isEmptyFolder(string $folder) : bool
+    {
+        if (is_dir($folder)) {
+            $contents = array_diff(scandir($folder), ['.', '..']);
+            if (count($contents) === 0) {
+                return true;
+            }
+        } else {
+            throw new \InvalidArgumentException('Path '.$folder.' is not an folder.');
+        }
+        return false;
+    }
+
+    /**
      * Delete file or folder (recursive) on specified path if it exists
      * @param string $path
      */

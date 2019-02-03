@@ -147,6 +147,22 @@ class Image
     }
 
     /**
+     * @return string
+     */
+    public function getExtension(): string
+    {
+        return $this->extension;
+    }
+
+    /**
+     * @return string
+     */
+    public function getMimeType(): string
+    {
+        return $this->mimeType;
+    }
+
+    /**
      * Get transparent pixel
      * @return \ImagickPixel
      */
@@ -219,7 +235,7 @@ class Image
     {
         $sizes = ($imageSizes !== null)
             ? $imageSizes
-            : ImageSizesCollection::fromArray(self::$defaultImageSizes);
+            : ImageSizesCollection::getDefault();
         $folderPath = ($targetFolder !== null)
             ? $targetFolder
             : str_ireplace(basename($this->imagePath), '', $this->imagePath);
@@ -247,7 +263,7 @@ class Image
         foreach ($sizes as $size) {
             $this->image = clone $backup;
             $this->image->setcompressionquality(self::DEFAULT_QUALITY);
-            if ($this->mimeType == 'image/jpeg') {
+            if ($this->mimeType !== 'image/png') {
                 $this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
             }
             if (!is_dir($folderPath . '/resized/' . $size->name)) {
@@ -299,13 +315,27 @@ class Image
         } else {
             $this->resizeByLongest($width, $height);
         }
-        if ($this->mimeType == 'image/jpeg') {
+        if ($this->mimeType !== 'image/png') {
             $this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
         }
         $this->image->writeimage($filepath);
         $this->image = clone $backup;
         unset($backup);
         return new Image($filepath);
+    }
+
+    /**
+     * @param string $target
+     * @param int $quality
+     */
+    public function writeImage(string $target, int $quality = self::DEFAULT_QUALITY): void
+    {
+        Tooler::unlinkIfExists($target);
+        if ($this->getMimeType() !== 'image/png') {
+            $this->image->setCompressionQuality($quality);
+            $this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
+        }
+        $this->image->writeImage($target);
     }
 
     /**
@@ -323,16 +353,22 @@ class Image
     {
         $sizes = ($imageSizes !== null)
             ? $imageSizes
-            : ImageSizesCollection::fromArray(self::$defaultImageSizes);
+            : ImageSizesCollection::getDefault();
         $folderPath = ($targetFolder !== null)
             ? $targetFolder
             : str_ireplace(basename($this->imagePath), '', $this->imagePath);
-        $filename = ($targetBaseName === null)
+        $filename = ($targetBaseName !== null)
             ? $targetBaseName
             : $this->sanitizedFilename;
         foreach ($sizes as $size) {
             $filepath = $folderPath . '/resized/' . $size->name . '/' . $filename . $this->extension;
             Tooler::unlinkIfExists($filepath);
+            if (Tooler::isEmptyFolder($folderPath . '/resized/' . $size->name)) {
+                Tooler::unlinkIfExists($folderPath . '/resized/' . $size->name);
+            }
+        }
+        if (Tooler::isEmptyFolder($folderPath . '/resized')) {
+            Tooler::unlinkIfExists($folderPath . '/resized');
         }
         if ($deleteOriginal) {
             $this->image->destroy();
@@ -368,7 +404,7 @@ class Image
     {
         $this->resizeByLongest($width, $height);
         Tooler::unlinkIfExists($this->imagePath);
-        if ($this->mimeType == 'image/jpeg') {
+        if ($this->mimeType !== 'image/png') {
             $this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
         }
         $this->image->writeimage($this->imagePath);
