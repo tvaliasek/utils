@@ -149,4 +149,18 @@ class ImageSizesCollection implements \Iterator, Collection
     {
         $this->pointer = 0;
     }
+
+    public function getNames() : array
+    {
+        $names = [];
+        foreach ($this->sizes as $size) {
+            $names[] = $size->getName();
+        }
+        return $names;
+    }
+
+    public static function getDefault() : ImageSizesCollection
+    {
+        return self::fromArray(Image::$defaultImageSizes);
+    }
 }

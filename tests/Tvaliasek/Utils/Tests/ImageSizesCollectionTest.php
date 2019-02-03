@@ -44,6 +44,20 @@ class ImageSizesCollectionTest extends TestCase
      * @depends testCanBeConstructed
      * @param ImageSizesCollection $collection
      */
+    public function testGetNames(ImageSizesCollection $collection)
+    {
+        $actual = $collection->getNames();
+        $expected = [
+            self::TEST_NAME1,
+            self::TEST_NAME2
+        ];
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * @depends testCanBeConstructed
+     * @param ImageSizesCollection $collection
+     */
     public function testIsEmpty(ImageSizesCollection $collection)
     {
         $this->assertTrue(!$collection->isEmpty());
@@ -102,6 +116,17 @@ class ImageSizesCollectionTest extends TestCase
         ];
         $collection = ImageSizesCollection::fromArray($input);
         $this->assertInstanceOf(ImageSizesCollection::class, $collection);
+    }
+
+    public function testGetDefault()
+    {
+        $sizes = [];
+        foreach (Image::$defaultImageSizes as $size) {
+            $sizes[] = ImageSize::fromArray($size);
+        }
+        $expected = new ImageSizesCollection(...$sizes);
+        $actual = ImageSizesCollection::getDefault();
+        $this->assertEquals($expected, $actual);
     }
 
     public function testCopy()
