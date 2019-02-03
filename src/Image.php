@@ -223,7 +223,7 @@ class Image
         $folderPath = ($targetFolder !== null)
             ? $targetFolder
             : str_ireplace(basename($this->imagePath), '', $this->imagePath);
-        $filename = ($targetBaseName === null)
+        $filename = ($targetBaseName !== null)
             ? $targetBaseName
             : $this->sanitizedFilename;
         $this->rotateByExif();
