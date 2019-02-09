@@ -158,14 +158,32 @@ class ImageTest extends TestCase
         Tooler::unlinkIfExists(__DIR__ . '/assets/rotated.jpg');
     }
 
-    public static function tearDownAfterClass()
+    public function testFlip()
     {
-        Tooler::unlinkIfExists(__DIR__.'/assets/copy.png');
-        Tooler::unlinkIfExists(__DIR__.'/assets/copy.jpg');
-        Tooler::unlinkIfExists(__DIR__.'/assets/resized');
-        Tooler::unlinkIfExists(__DIR__.'/assets/rotated.jpg');
-        Tooler::unlinkIfExists(__DIR__.'/assets/rotated.png');
-        Tooler::unlinkIfExists(__DIR__.'/alternative');
+        $this->copyImages();
+        $jpg = new Image($this->jpgCopy);
+        $this->assertTrue($jpg->flipVertically());
+        $this->assertTrue($jpg->flipHorizontally());
     }
 
+    public function testCropAt()
+    {
+        $this->copyImages();
+        $jpg = new Image($this->jpgCopy);
+        $jpg->cropAt(568, 0, 1024, 200);
+        $jpg->resizeOverwrite(800, 156);
+        $newGeometry = $this->getGeometry($this->jpgCopy);
+        $this->assertTrue(($newGeometry['width'] >= 799 && $newGeometry['width'] <= 800));
+        $this->assertTrue(($newGeometry['height'] >= 155 && $newGeometry['height'] <= 156));
+    }
+
+    public static function tearDownAfterClass()
+    {
+        Tooler::unlinkIfExists(__DIR__ . '/assets/copy.png');
+        Tooler::unlinkIfExists(__DIR__ . '/assets/copy.jpg');
+        Tooler::unlinkIfExists(__DIR__ . '/assets/resized');
+        Tooler::unlinkIfExists(__DIR__ . '/assets/rotated.jpg');
+        Tooler::unlinkIfExists(__DIR__ . '/assets/rotated.png');
+        Tooler::unlinkIfExists(__DIR__ . '/alternative');
+    }
 }

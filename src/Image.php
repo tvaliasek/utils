@@ -474,15 +474,46 @@ class Image
 
     /**
      * @param int $quality
-     * @return bool|string
+     * @return string|null
      * @throws \ImagickException
      */
-    public function convertToJpg(int $quality)
+    public function convertToJpg(int $quality): ?string
     {
         $image = $this->convertImagickToJpg($this->image);
         $image->setCompressionQuality($quality);
         $tmp = tempnam(sys_get_temp_dir(), 'image-');
-        $image->writeImage($tmp);
-        return $tmp;
+        if (!empty($tmp)) {
+            $image->writeImage($tmp);
+            return $tmp;
+        }
+        return null;
+    }
+
+    /**
+     * @return bool
+     */
+    public function flipVertically(): bool
+    {
+        return $this->image->flipImage();
+    }
+
+    /**
+     * @return bool
+     */
+    public function flipHorizontally(): bool
+    {
+        return $this->image->flopImage();
+    }
+
+    /**
+     * @param int $top
+     * @param int $left
+     * @param int $width
+     * @param int $height
+     * @return bool
+     */
+    public function cropAt(int $top, int $left, int $width, int $height): bool
+    {
+        return $this->image->cropImage($width, $height, $left, $top);
     }
 }
