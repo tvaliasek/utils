@@ -210,13 +210,23 @@ class Image
      * @param int $height
      * @return Image
      */
-    private function resizeByLongest(int $width, int $height): self
+    public function resizeByLongest(int $width, int $height): self
     {
         if ($this->width < $this->height) {
             $this->image->resizeimage($height, $width, \Imagick::FILTER_UNDEFINED, 0.7, true);
         } else {
             $this->image->resizeimage($width, $height, \Imagick::FILTER_UNDEFINED, 0.7, true);
         }
+        return $this;
+    }
+
+    /**
+     * @param ImageSize $size
+     * @return Image
+     */
+    public function resizeToSize(ImageSize $size): self
+    {
+        $this->image->resizeimage($size->getWidth(), $size->getHeight(), \Imagick::FILTER_UNDEFINED, 0.7, true);
         return $this;
     }
 
@@ -283,6 +293,24 @@ class Image
             $this->image = clone $backup;
         }
         unset($backup);
+    }
+
+    /**
+     * @param string $path
+     * @param int $quality
+     * @return bool
+     */
+    public function saveTo(string $path, int $quality = self::DEFAULT_QUALITY) : bool
+    {
+        $backup = clone $this->image;
+        if ($this->mimeType !== 'image/png') {
+            $this->image->setcompressionquality($quality);
+            $this->image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
+        }
+        Tooler::unlinkIfExists($path);
+        $result = $this->image->writeImage($path);
+        $this->image = $backup;
+        return $result;
     }
 
     /**
