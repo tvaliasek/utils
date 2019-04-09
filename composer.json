@@ -4,9 +4,6 @@
   "type": "library",
   "require": {
     "php": ">=7.1.0",
-    "ext-fileinfo": "*",
-    "ext-imagick": "*",
-    "ext-exif": "*",
     "nette/application": "^2.4",
     "nette/utils": "^2.5",
     "php-ds/php-ds": "^1.2",
