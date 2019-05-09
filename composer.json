@@ -3,12 +3,10 @@
   "description": "Various utility functions and classes",
   "type": "library",
   "require": {
-    "php": ">=7.1.0",
-    "nette/application": "^2.4",
-    "nette/utils": "^2.5",
-    "php-ds/php-ds": "^1.2",
-    "latte/latte": "^2.4",
-    "nette/mail": "^2.4"
+    "php": ">=7.3",
+    "nette/application": "^3.0",
+    "nette/utils": "^3.0",
+    "php-ds/php-ds": "^1.2"
   },
   "autoload": {
     "psr-4": {

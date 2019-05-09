@@ -300,7 +300,7 @@ class Image
      * @param int $quality
      * @return bool
      */
-    public function saveTo(string $path, int $quality = self::DEFAULT_QUALITY) : bool
+    public function saveTo(string $path, int $quality = self::DEFAULT_QUALITY): bool
     {
         $backup = clone $this->image;
         if ($this->mimeType !== 'image/png') {
@@ -490,7 +490,7 @@ class Image
      * @return \Imagick
      * @throws \ImagickException
      */
-    public function convertImagickToJpg(\Imagick $image)
+    public function convertImagickToJpg(\Imagick $image): \Imagick
     {
         $white = new \Imagick();
         $geometry = $image->getImageGeometry();
