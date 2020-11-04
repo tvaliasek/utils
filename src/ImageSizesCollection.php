@@ -4,12 +4,14 @@ namespace Tvaliasek\Utils;
 
 
 use Ds\Collection;
+use Exception;
+use Traversable;
 
 /**
  * Class ImageSizesCollection
  * @package Tvaliasek\Utils
  */
-class ImageSizesCollection implements \Iterator, Collection
+class ImageSizesCollection implements Collection
 {
     /**
      * @var array ImageSize[]
@@ -162,5 +164,10 @@ class ImageSizesCollection implements \Iterator, Collection
     public static function getDefault() : ImageSizesCollection
     {
         return self::fromArray(Image::$defaultImageSizes);
+    }
+
+    public function getIterator(): \Iterator
+    {
+        return new \ArrayIterator($this->sizes);
     }
 }
