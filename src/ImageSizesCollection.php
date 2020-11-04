@@ -9,7 +9,7 @@ use Ds\Collection;
  * Class ImageSizesCollection
  * @package Tvaliasek\Utils
  */
-class ImageSizesCollection implements \Iterator, Collection
+class ImageSizesCollection implements Collection
 {
     /**
      * @var array ImageSize[]
@@ -162,5 +162,10 @@ class ImageSizesCollection implements \Iterator, Collection
     public static function getDefault() : ImageSizesCollection
     {
         return self::fromArray(Image::$defaultImageSizes);
+    }
+
+    public function getIterator()
+    {
+        return new \ArrayIterator($this->sizes);
     }
 }
