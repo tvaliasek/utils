@@ -240,7 +240,8 @@ class Image
     public function processResizes(
         ImageSizesCollection $imageSizes = null,
         string $targetFolder = null,
-        string $targetBaseName = null
+        string $targetBaseName = null,
+        bool $autoRotate = true
     ): void
     {
         $sizes = ($imageSizes !== null)
@@ -252,7 +253,9 @@ class Image
         $filename = ($targetBaseName !== null)
             ? $targetBaseName
             : $this->sanitizedFilename;
-        $this->rotateByExif();
+        if ($autoRotate) {
+            $this->rotateByExif();
+        }
         $this->processResizesImagick($sizes, $folderPath, $filename);
     }
 
@@ -325,10 +328,13 @@ class Image
         string $filename,
         int $width,
         int $height,
-        string $method = self::RESIZE_METHOD_CONTAIN
+        string $method = self::RESIZE_METHOD_CONTAIN,
+        bool $autoRotate = true
     ): Image
     {
-        $this->rotateByExif();
+        if ($autoRotate) {
+            $this->rotateByExif();
+        }
         $backup = clone $this->image;
         $this->image->setcompressionquality(self::DEFAULT_QUALITY);
         $folderPath = str_ireplace(basename($this->imagePath), '', $this->imagePath);
