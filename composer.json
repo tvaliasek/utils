@@ -3,9 +3,9 @@
   "description": "Various utility functions and classes",
   "type": "library",
   "require": {
-    "php": ">=7.3",
+    "php": ">=8.3",
     "nette/application": "^3.0",
-    "nette/utils": "^3.0",
+    "nette/utils": "^4.0",
     "php-ds/php-ds": "^1.2"
   },
   "autoload": {
@@ -15,7 +15,7 @@
   },
   "license": "MIT",
   "require-dev": {
-    "phpunit/phpunit": "^7.5",
+    "phpunit/phpunit": "^8.0",
     "php-vfs/php-vfs": "^1.4"
   }
 }
