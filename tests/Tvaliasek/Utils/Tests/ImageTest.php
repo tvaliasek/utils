@@ -177,7 +177,7 @@ class ImageTest extends TestCase
         $this->assertTrue(($newGeometry['height'] >= 155 && $newGeometry['height'] <= 156));
     }
 
-    public static function tearDownAfterClass()
+    public static function tearDownAfterClass(): void
     {
         Tooler::unlinkIfExists(__DIR__ . '/assets/copy.png');
         Tooler::unlinkIfExists(__DIR__ . '/assets/copy.jpg');

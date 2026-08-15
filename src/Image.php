@@ -238,9 +238,9 @@ class Image
      * @throws \ImagickException
      */
     public function processResizes(
-        ImageSizesCollection $imageSizes = null,
-        string $targetFolder = null,
-        string $targetBaseName = null,
+        ?ImageSizesCollection $imageSizes = null,
+        ?string $targetFolder = null,
+        ?string $targetBaseName = null,
         bool $autoRotate = true
     ): void
     {
@@ -380,9 +380,9 @@ class Image
      */
     public function deleteResizes(
         bool $deleteOriginal = false,
-        ImageSizesCollection $imageSizes = null,
-        string $targetFolder = null,
-        string $targetBaseName = null
+        ?ImageSizesCollection $imageSizes = null,
+        ?string $targetFolder = null,
+        ?string $targetBaseName = null
     ): void
     {
         $sizes = ($imageSizes !== null)

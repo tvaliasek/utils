@@ -31,7 +31,7 @@ class XSendfileResponse implements Nette\Application\IResponse
      * @param string|null $name
      * @throws \Exception
      */
-    public function __construct(string $file, string $name = null)
+    public function __construct(string $file, ?string $name = null)
     {
         if (!file_exists($file)) {
             throw new \InvalidArgumentException('Cannot find file: ' . $file);
